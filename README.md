@@ -1,2 +1,2 @@
 # iotrace
-Monitor Linux processes files IO
+Monitor and report Linux process files IO.
