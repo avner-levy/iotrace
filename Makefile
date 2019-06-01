@@ -4,7 +4,7 @@ LDFLAGS  := -L/usr/lib -lstdc++ -lm
 BUILD    := ./build
 OBJ_DIR  := $(BUILD)/objects
 APP_DIR  := $(BUILD)/apps
-TARGET   := program
+TARGET   := iotrace
 INCLUDE  := -Iinclude/
 SRC      :=                      \
 	$(wildcard src/module1/*.cpp) \
