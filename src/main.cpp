@@ -25,6 +25,7 @@ void usage()
             "-report report-file : write the IO report into report-file" << endl;
 }
 
+// Simple method to get command line arguments
 const char *getParam(const char *a_sParamName, const char **argv, int argc, bool a_bNoVal=false)
 {
     int i;
@@ -41,6 +42,7 @@ const char *getParam(const char *a_sParamName, const char **argv, int argc, bool
 
 CIOTrace *iotrace=NULL;
 
+// Handle Ctrl+C and generate the report before exit
 void handler(int sig)
 {
 	COutput::stream(eInfo)<<"Got signal " << sig << " printing summary and exit..."<< endl;
@@ -51,6 +53,7 @@ void handler(int sig)
 
 int main(int argc, const char *argv[] )
 {
+	// Read command line parameters
     const char *l_sCommand = 		getParam("-cmd", argv, argc);
     const char *l_sReportFile = 	getParam("-report", argv, argc);
     const char *l_sAttachProcess = 	getParam("-p", argv, argc);
@@ -59,25 +62,30 @@ int main(int argc, const char *argv[] )
     bool l_bDebug   = 				getParam("-d",   argv, argc, true);
     bool l_bReportOnline = 			getParam("-o",   argv, argc, true);
 
+    // We need either attach or new command for running
 	if (argc==1 || (!l_sCommand && !l_sAttachProcess))
 	{
 		usage();
 	    return EXIT_ERROR;
 	}
+
 	tProcessId attachedProcessId=0;
 	if (l_sAttachProcess!=NULL)
     	attachedProcessId=std::stoi(l_sAttachProcess);
     if (l_bDebug)
 		COutput::get().setLevel(eInfo);
+    // If writing to a file report we open it now to verify we will be able to write to it when needed
 	if (l_sReportFile!=NULL && !COutput::get().openReportFile(l_sReportFile)) {
 		LOG(eFatal)<<"Failed to open report file "<< l_sReportFile << ", exiting..." << endl;
 		return EXIT_ERROR;
 	}
 	iotrace= new CIOTrace(l_bReportOnline, l_bIncomplete, l_bFollowFork, attachedProcessId, l_sCommand?l_sCommand:"");
     signal(SIGINT, handler);
+    // Run/Monitor the process
     if (!iotrace->monitor())
     	LOG(eFatal)<< "Failed to run strace and monitor process" << endl;
     LOG(ePrint) << "Finished monitoring process"<<endl;
+    // Print report once finished monitoring
     iotrace->printReport();
     COutput::get().closeReportFile();
 
