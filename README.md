@@ -1,14 +1,16 @@
 # iotrace
 Monitor and generate reports on Linux process's files/sockets IO.
 
-The tool uses the strace command in order to monitor the process's file activity.
-By going over strace output and keeping information on each file operation it is able to provide a final report with the following data for each tcp socket/file:
+The tool uses the strace utility in order to monitor the process's file activity.
+By going over strace output and collecting information on each file operation, it is able to provide a final report with the following data for each tcp socket/file:
 1. Filename
 2. Bytes read
 3. Bytes written
 4. How many times the file was opened
 5. How many read operations were done
 6. How many write operations were done
+
+The tool uses /proc/pid/fd to complete missing data (in case we are attaching a running process which part of its files were opened before we attached). The and /proc/net/tcp is used to provide segnificant information on the sockets source and destination (including ports).
 
 ### Tool usage:
 The tool has two main running modes like strace does, attaching to process or running a new command.
