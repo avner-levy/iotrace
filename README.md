@@ -33,4 +33,15 @@ socket_127.0.0.1:47948->127.0.0.1:22,1781764,396,0,8905,11
 myfile.txt,65,0,9,10,0
 pipe:[3339],0,0,0,1,0
 ```
+### Build
+Make sure you have g++ / make installed.
+Download code and run make.
+The tool will be built in ./build/apps/iotrace
+
+### Run
+Use the following usage section to see relevant parameters.
+Make sure you have strace installed on machine.
+In case of attaching to other processes run the tool with sudo to enable needed permissions.
+
+
 
