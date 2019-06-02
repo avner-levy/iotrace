@@ -44,32 +44,42 @@ CIOTrace *iotrace=NULL;
 void handler(int sig)
 {
 	COutput::stream(eInfo)<<"Got signal " << sig << " printing summary and exit..."<< endl;
-	//CioTrace::instance().printSummary();
-	//CioTrace::instance().CloseReportFile();
+	iotrace->printReport();
+	COutput::get().closeReportFile();
     exit(0);
 }
+
 int main(int argc, const char *argv[] )
 {
     const char *l_sCommand = 		getParam("-cmd", argv, argc);
-    const char *l_sDebug   = 		getParam("-d",   argv, argc, true);
-    const char *l_sReportOnline = 	getParam("-o",   argv, argc, true);
     const char *l_sReportFile = 	getParam("-report", argv, argc);
     const char *l_sAttachProcess = 	getParam("-p", argv, argc);
-    const char *l_sIncomplete = 	getParam("-i", argv, argc, true);
-    const char *l_sFollowFork = 	getParam("-f", argv, argc, true);
+    bool l_bIncomplete = 			getParam("-i", argv, argc, true);
+    bool l_bFollowFork = 			getParam("-f", argv, argc, true);
+    bool l_bDebug   = 				getParam("-d",   argv, argc, true);
+    bool l_bReportOnline = 			getParam("-o",   argv, argc, true);
 
 	if (argc==1 || (!l_sCommand && !l_sAttachProcess))
 	{
 		usage();
 	    return EXIT_ERROR;
 	}
-
-	if (!COutput::get().openReportFile(l_sReportFile)) {
-		COutput::stream(eFatal)<<"Failed to open report file "<< l_sReportFile << ", exiting..." << endl;
+	tProcessId attachedProcessId=0;
+	if (l_sAttachProcess!=NULL)
+    	attachedProcessId=std::stoi(l_sAttachProcess);
+    if (l_bDebug)
+		COutput::get().setLevel(eInfo);
+	if (l_sReportFile!=NULL && !COutput::get().openReportFile(l_sReportFile)) {
+		LOG(eFatal)<<"Failed to open report file "<< l_sReportFile << ", exiting..." << endl;
 		return EXIT_ERROR;
 	}
-	iotrace= new CIOTrace(l_sDebug!=NULL, l_sReportOnline!=NULL, l_sIncomplete!=NULL, l_sFollowFork!=NULL);
+	iotrace= new CIOTrace(l_bReportOnline, l_bIncomplete, l_bFollowFork, attachedProcessId, l_sCommand?l_sCommand:"");
     signal(SIGINT, handler);
+    if (!iotrace->monitor())
+    	LOG(eFatal)<< "Failed to run strace and monitor process" << endl;
+    LOG(ePrint) << "Finished monitoring process"<<endl;
+    iotrace->printReport();
+    COutput::get().closeReportFile();
 
 	return 0;
 }

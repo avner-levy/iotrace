@@ -24,12 +24,12 @@ public:
         {m_oFileInfoIter=a_oFileInfoIter;}
     void read(UInt64 a_nRead)
         {
-    		COutput::stream(eInfo)<<"Added read of " << a_nRead<< " bytes on file "<< m_sName.c_str();
+    		LOG(eInfo)<<"Added read of " << a_nRead<< " bytes on file "<< m_sName <<std::endl;
             m_oFileInfoIter->second.read(a_nRead);
         }
     void write(UInt64 a_nWrite)
         {
-    		COutput::stream(eInfo)<<"Added write of " << a_nWrite<< " bytes on file "<< m_sName.c_str();
+    		LOG(eInfo)<<"Added write of " << a_nWrite<< " bytes on file "<< m_sName <<std::endl;
             m_oFileInfoIter->second.write(a_nWrite);
         }
     void open() {m_oFileInfoIter->second.open();}
