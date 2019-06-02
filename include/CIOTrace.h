@@ -11,6 +11,7 @@
 #include "CFileInfo.h"
 #include "CActiveFileInfo.h"
 #include "CPendingIoOp.h"
+#include "CStraceOutputParser.h"
 
 class CIOTrace final{
 public:
@@ -30,15 +31,15 @@ protected:
 
 
 	// handle different strace file operations
-	void handleOpen(tProcessId a_nPid, char *a_sLine, int a_nLen, const std::string &a_sFilename);
+	void handleOpen(tProcessId a_nPid, const CStraceOutputParser::CStraceOperation & a_oStraceOp, const char *a_sFilename);
 
-	void UpdateRead(CActiveFileInfo *a_opActiveFile, const char *a_sLine, unsigned int a_nLineLen);
-	void handleRead(tProcessId a_nPid, char *a_sLine, unsigned int a_nLineLen, tFileNum a_nFileId);
+	void UpdateRead(CActiveFileInfo *a_opActiveFile, const CStraceOutputParser::CStraceOperation & a_oStraceOp);
+	void handleRead(tProcessId a_nPid, const CStraceOutputParser::CStraceOperation & a_oStraceOp, tFileNum a_nFileId);
 
-	void updateWrite(CActiveFileInfo *a_opActiveFile, const char *a_sLine, unsigned int a_nLineLen);
-	void handleWrite(tProcessId a_nPid, char *a_sLine, unsigned int a_nLineLen, tFileNum a_nFileId);
-	void handleClose(tProcessId a_nPid, char *a_sLine, unsigned int a_nLineLen);
-	void handleUnfinished(tProcessId a_nPid, char *a_sLine, int a_nLen);
+	void updateWrite(CActiveFileInfo *a_opActiveFile, const CStraceOutputParser::CStraceOperation & a_oStraceOp);
+	void handleWrite(tProcessId a_nPid, const CStraceOutputParser::CStraceOperation & a_oStraceOp, tFileNum a_nFileId);
+	void handleClose(tProcessId a_nPid, const CStraceOutputParser::CStraceOperation & a_oStraceOp);
+	void handleUnfinished(tProcessId a_nPid, const CStraceOutputParser::CStraceOperation & a_oStraceOp);
 
 	void addPendingIoOperation(
 						tProcessId            	a_nPid,
