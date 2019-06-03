@@ -16,7 +16,10 @@ typedef unsigned long long UInt64;
 // File Descriptor number (32 bit is more than enough)
 typedef unsigned int tFileNum;
 
+// Process ID
 typedef unsigned int tProcessId;
+
+// Type of a set of process IDs
 typedef std::set<tProcessId> tPidSet;
 
 // Supported strace file operations
