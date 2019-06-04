@@ -178,8 +178,10 @@ unique_ptr<CStraceOutputParser::CStraceOperation>  CStraceOutputParser::parseStr
         case 'w': // write
         	if (strncmp(READ_LINE,a_sLine,READ_CMD_LENGTH)==0 || strncmp(WRITE_LINE,a_sLine,WRITE_CMD_LENGTH)==0)
         	{
+            	bool l_breadOp= strncmp(READ_LINE,a_sLine,READ_CMD_LENGTH)==0;
+
         		UInt64 l_nBytes=0;
-        		l_nFileNum=getFileNum(a_sLine+READ_CMD_LENGTH);
+        		l_nFileNum=getFileNum(a_sLine+(l_breadOp? READ_CMD_LENGTH : WRITE_CMD_LENGTH));
             	if (l_nFileNum==UNKNOWN_NUM)
 				{
 					LOG(eInfo)<< "Failed to find read descriptor number from "<< a_sLine << endl;
@@ -195,6 +197,7 @@ unique_ptr<CStraceOutputParser::CStraceOperation>  CStraceOutputParser::parseStr
 						return nullptr;
 					}
         		}
+        		LOG(eInfo)<< "Found "<<(l_breadOp?"read":"write")<< " operation, pid="<< l_nPid<<" file descriptor="<< l_nFileNum << " bytes " << l_nBytes << endl;
         		if (strncmp(READ_LINE,a_sLine,READ_CMD_LENGTH)==0)
         			return std::make_unique<CStraceReadOperation>(l_eOpState, l_nPid, l_nFileNum, l_nBytes);
         		else

@@ -179,45 +179,46 @@ void CIOTrace::processLine(char *a_sLine)
 	}
     // In case the flag -f wasn't added to strace, the pid for each line isn't reported
     // so we need to use the pid we got for the tracing command
-	tProcessId l_nPid= m_bFollowFork ? l_oStraceOp->pid() : m_nAttachProcess;
+	if (!m_bFollowFork)
+		l_oStraceOp->setPid(m_nAttachProcess);
 
-    if (l_nPid>0)
+    if (l_oStraceOp->pid()>0)
     {
-        tPidSet::iterator l_oIter= m_oPidSet.find(l_nPid);
+        tPidSet::iterator l_oIter= m_oPidSet.find(l_oStraceOp->pid());
         if (l_oIter==m_oPidSet.end())
         {
-            string l_sProcName=CGetProcessInfo::getCommandLine(l_nPid);
-            LOG(ePrint)<< "new pid "<<l_nPid<<" process "<< l_sProcName;
+            string l_sProcName=CGetProcessInfo::getCommandLine(l_oStraceOp->pid());
+            LOG(ePrint)<< "new pid "<<l_oStraceOp->pid()<<" process "<< l_sProcName;
             // Add the files already opened into the active files list
-            m_oPidSet.insert(tPidSet::value_type(l_nPid));
-            addProcessFilesAndSocketsToActiveFiles(l_nPid);
+            m_oPidSet.insert(tPidSet::value_type(l_oStraceOp->pid()));
+            addProcessFilesAndSocketsToActiveFiles(l_oStraceOp->pid());
         }
         else
         {
-            LOG(eInfo) << "Handling pid="<< l_nPid;
+            LOG(eInfo) << "Handling pid="<< l_oStraceOp->pid()<<endl;
         }
     }
 
     if (l_oStraceOp->resumed())
-		handleUnfinished(l_nPid, l_oStraceOp.get());
+		handleUnfinished(*l_oStraceOp);
     else
     {
 		switch (l_oStraceOp->opType())
 		{
 			case eOpen: // open
-				handleOpen(l_nPid, dynamic_cast<CStraceOutputParser::CStraceOpenOperation&>(*l_oStraceOp), nullptr);
+				handleOpen(dynamic_cast<CStraceOutputParser::CStraceOpenOperation&>(*l_oStraceOp));
 				return;
 				break;
 			case eRead: // read
-				handleRead(l_nPid, dynamic_cast<CStraceOutputParser::CStraceReadOperation&>(*l_oStraceOp), UNKNOWN_NUM);
+				handleRead(dynamic_cast<CStraceOutputParser::CStraceReadOperation&>(*l_oStraceOp));
 				return;
 				break;
 			case eWrite: // write
-				handleWrite(l_nPid, dynamic_cast<CStraceOutputParser::CStraceWriteOperation&>(*l_oStraceOp), UNKNOWN_NUM);
+				handleWrite(dynamic_cast<CStraceOutputParser::CStraceWriteOperation&>(*l_oStraceOp));
 				return;
 				break;
 			case eClose: // close
-				handleClose(l_nPid, dynamic_cast<CStraceOutputParser::CStraceCloseOperation&>(*l_oStraceOp));
+				handleClose(dynamic_cast<CStraceOutputParser::CStraceCloseOperation&>(*l_oStraceOp));
 				return;
 				break;
 		}
@@ -258,19 +259,17 @@ CActiveFileInfo *CIOTrace::GetActiveFile(tProcessId a_nPid, tFileNum a_nFileNum)
 		return &(l_oIter->second);
 }
 
-void CIOTrace::handleOpen(tProcessId a_nPid, const CStraceOutputParser::CStraceOpenOperation & a_oStraceOp, const char *a_sFilename)
+void CIOTrace::handleOpen(const CStraceOutputParser::CStraceOpenOperation & a_oStraceOp)
 {
-    string l_sFilename= a_sFilename ? string(a_sFilename) : a_oStraceOp.filename();
-    LOG(eInfo)<<"handleOpen: l_sFilename="<<l_sFilename<<endl;
 	if (a_oStraceOp.unfinished())
 	{
-		addPendingIoOperation(a_nPid, eOpen, UNKNOWN_NUM, l_sFilename);
+		addPendingIoOperation(a_oStraceOp.pid(), eOpen, UNKNOWN_NUM, a_oStraceOp.filename());
 		return;
 	}
 	else
 	{
-		AddActiveFile(a_nPid, a_oStraceOp.fileNum(), l_sFilename);
-		CActiveFileInfo *l_oFile=GetActiveFile(a_nPid, a_oStraceOp.fileNum());
+		AddActiveFile(a_oStraceOp.pid(), a_oStraceOp.fileNum(), a_oStraceOp.filename());
+		CActiveFileInfo *l_oFile=GetActiveFile(a_oStraceOp.pid(), a_oStraceOp.fileNum());
 		if (l_oFile) l_oFile->open();
 	}
 }
@@ -282,19 +281,16 @@ void CIOTrace::UpdateRead(CActiveFileInfo *a_opActiveFile, const CStraceOutputPa
 	a_opActiveFile->read(a_oStraceOp.bytes());
 }
 
-void CIOTrace::handleRead(tProcessId a_nPid, const CStraceOutputParser::CStraceReadOperation & a_oStraceOp, tFileNum a_nFileId)
+void CIOTrace::handleRead(const CStraceOutputParser::CStraceReadOperation & a_oStraceOp)
 {
-    tFileNum l_nFileNum;
-    l_nFileNum = a_nFileId!=UNKNOWN_NUM ? a_nFileId : a_oStraceOp.fileNum();
-
 	if (a_oStraceOp.unfinished())
 	{
-		addPendingIoOperation(a_nPid, eRead, l_nFileNum, "");
+		addPendingIoOperation(a_oStraceOp.pid(), eRead, a_oStraceOp.fileNum(), "");
 		return;
 	}
 	else
 	{
-		CActiveFileInfo *l_opActiveFile=GetActiveFile(a_nPid, l_nFileNum);
+		CActiveFileInfo *l_opActiveFile=GetActiveFile(a_oStraceOp.pid(), a_oStraceOp.fileNum());
 		if (l_opActiveFile)
 		{
 			UpdateRead(l_opActiveFile, a_oStraceOp);
@@ -303,25 +299,24 @@ void CIOTrace::handleRead(tProcessId a_nPid, const CStraceOutputParser::CStraceR
 		{
 			if (m_bIncludeIncomplete)
 			{
-				string l_sIncompleteName = genIncompleteFilenameName(a_nPid, l_nFileNum);
+				string l_sIncompleteName = genIncompleteFilenameName(a_oStraceOp.pid(), a_oStraceOp.fileNum());
 
 				// If the name returns empty it means that the file name was found already and added
 				// to the active file list
 				if (l_sIncompleteName!="")
-					AddActiveFile(a_nPid, l_nFileNum, l_sIncompleteName.c_str());
-				LOG(eInfo) << "Added active file for descriptor " << l_nFileNum << "pid " << a_nPid<<endl;
-				CActiveFileInfo *l_opActiveFile=GetActiveFile(a_nPid, l_nFileNum);
+					AddActiveFile(a_oStraceOp.pid(), a_oStraceOp.fileNum(), l_sIncompleteName.c_str());
+				CActiveFileInfo *l_opActiveFile=GetActiveFile(a_oStraceOp.pid(), a_oStraceOp.fileNum());
 				if (l_opActiveFile)
 				{
 					UpdateRead(l_opActiveFile, a_oStraceOp);
 				}
 				else
 				{
-					LOG(eError) << "couldn't find file read details for " << l_nFileNum<< endl;
+					LOG(eError) << "couldn't find file read details for " << a_oStraceOp.fileNum()<< endl;
 				}
 			}
 			else {
-				LOG(eError)<< "couldn't find file read details for "<< l_nFileNum <<endl;
+				LOG(eError)<< "couldn't find file read details for "<< a_oStraceOp.fileNum() <<endl;
 			}
 		}
 	}
@@ -335,17 +330,16 @@ void CIOTrace::updateWrite(CActiveFileInfo *a_opActiveFile, const CStraceOutputP
 	a_opActiveFile->write(a_oStraceOp.bytes());
 }
 
-void CIOTrace::handleWrite(tProcessId a_nPid, const CStraceOutputParser::CStraceWriteOperation & a_oStraceOp, tFileNum a_nFileId)
+void CIOTrace::handleWrite(const CStraceOutputParser::CStraceWriteOperation & a_oStraceOp)
 {
-    tFileNum l_nFileNum = a_nFileId!=UNKNOWN_NUM ? a_nFileId : a_oStraceOp.fileNum();
 	if (a_oStraceOp.unfinished())
 	{
-		addPendingIoOperation(a_nPid, eWrite, l_nFileNum, string(""));
+		addPendingIoOperation(a_oStraceOp.pid(), eWrite, a_oStraceOp.fileNum(), string(""));
 		return;
 	}
 	else
 	{
-		CActiveFileInfo *l_opActiveFile=GetActiveFile(a_nPid, l_nFileNum);
+		CActiveFileInfo *l_opActiveFile=GetActiveFile(a_oStraceOp.pid(), a_oStraceOp.fileNum());
 		if (l_opActiveFile)
 		{
 			updateWrite(l_opActiveFile, a_oStraceOp);
@@ -354,69 +348,89 @@ void CIOTrace::handleWrite(tProcessId a_nPid, const CStraceOutputParser::CStrace
 		{
 			if (m_bIncludeIncomplete)
 			{
-				string l_sIncompleteName = genIncompleteFilenameName(a_nPid, l_nFileNum);
+				string l_sIncompleteName = genIncompleteFilenameName(a_oStraceOp.pid(), a_oStraceOp.fileNum());
 
 				// If the name returns empty it means that the file name was found already and added
 				// to the active file list
 				if (l_sIncompleteName!="")
-					AddActiveFile(a_nPid, l_nFileNum, l_sIncompleteName.c_str());
+					AddActiveFile(a_oStraceOp.pid(), a_oStraceOp.fileNum(), l_sIncompleteName.c_str());
 
-				LOG(eInfo) << "Added active file for descriptor " << l_nFileNum << endl;
-				CActiveFileInfo *l_opActiveFile=GetActiveFile(a_nPid, l_nFileNum);
+				LOG(eInfo) << "Added active file for descriptor " << a_oStraceOp.fileNum() << endl;
+				CActiveFileInfo *l_opActiveFile=GetActiveFile(a_oStraceOp.pid(), a_oStraceOp.fileNum());
 				if (l_opActiveFile)
 				{
 					updateWrite(l_opActiveFile, a_oStraceOp);
 				}
 				else
-					LOG(eError)<< "coultn't find file write details, file num "<< l_nFileNum <<endl;
+					LOG(eError)<< "coultn't find file write details, file num "<< a_oStraceOp.fileNum() <<endl;
 			}
 			else
-				LOG(eError) << "couldn't find file write details, file num  " << l_nFileNum << endl;
+				LOG(eError) << "couldn't find file write details, file num  " << a_oStraceOp.fileNum() << endl;
 		}
 	}
 }
-void CIOTrace::handleClose(tProcessId a_nPid, const CStraceOutputParser::CStraceCloseOperation & a_oStraceOp)
+void CIOTrace::handleClose(const CStraceOutputParser::CStraceCloseOperation & a_oStraceOp)
 {
 	if (a_oStraceOp.unfinished())
 	{
-		addPendingIoOperation(a_nPid, eClose, a_oStraceOp.fileNum(), "");
+		addPendingIoOperation(a_oStraceOp.pid(), eClose, a_oStraceOp.fileNum(), "");
 	}
 	else
 	{
-		CActiveFileInfo *l_opActiveFile=GetActiveFile(a_nPid, a_oStraceOp.fileNum());
+		CActiveFileInfo *l_opActiveFile=GetActiveFile(a_oStraceOp.pid(), a_oStraceOp.fileNum());
 		if (l_opActiveFile)
 		{
 			LOG(eInfo) << "closing active file ["<< l_opActiveFile->getName()<<"]"<<endl;
-			RemoveActiveFile(a_nPid, a_oStraceOp.fileNum());
+			RemoveActiveFile(a_oStraceOp.pid(), a_oStraceOp.fileNum());
 		}
 		else
 			LOG(eError)<< "closing an unknown active file " <<a_oStraceOp.fileNum() << endl;
 	}
 }
 
-void CIOTrace::handleUnfinished(tProcessId a_nPid, const CStraceOutputParser::CStraceOperation * const a_opStraceOp)
+void CIOTrace::handleUnfinished(CStraceOutputParser::CStraceOperation & a_opStraceOp)
 {
 	tFilePendingInfoMap::iterator l_oIter;
-	l_oIter=m_oPedningIoOperations.find(a_nPid);
+	l_oIter=m_oPedningIoOperations.find(a_opStraceOp.pid());
 	if (l_oIter==m_oPedningIoOperations.end())
 	{
 		LOG(eFatal) << "couldn't find pending operation data" << endl;
 		return;
 	}
-	CPendingIoOp &PendOp = l_oIter->second;
-	switch (PendOp.op())
+	CPendingIoOp &l_oPendOp = l_oIter->second;
+	switch (l_oPendOp.op())
 	{
 		case eOpen :
-			handleOpen(a_nPid, dynamic_cast<const CStraceOutputParser::CStraceOpenOperation&>(*a_opStraceOp), PendOp.filename().length()>0 ? PendOp.filename().c_str() : nullptr);
+			{
+				CStraceOutputParser::CStraceOpenOperation l_oOp=dynamic_cast<CStraceOutputParser::CStraceOpenOperation&>(a_opStraceOp);
+				l_oOp.setFilename(l_oPendOp.filename());
+				l_oOp.setComplete();
+				handleOpen(l_oOp);
+			}
 			break;
 		case eClose:
-			handleClose(a_nPid, dynamic_cast<const CStraceOutputParser::CStraceCloseOperation&>(*a_opStraceOp));
+			{
+				CStraceOutputParser::CStraceCloseOperation & l_oOp=dynamic_cast<CStraceOutputParser::CStraceCloseOperation&>(a_opStraceOp);
+				l_oOp.setFileNum(l_oPendOp.fileId());
+				l_oOp.setComplete();
+				handleClose(l_oOp);
+			}
 			break;
 		case eRead:
-			handleRead(a_nPid, dynamic_cast<const CStraceOutputParser::CStraceReadOperation&>(*a_opStraceOp), PendOp.fileId());
+			{
+				CStraceOutputParser::CStraceReadOperation & l_oOp=dynamic_cast<CStraceOutputParser::CStraceReadOperation&>(a_opStraceOp);
+				l_oOp.setFileNum(l_oPendOp.fileId());
+				l_oOp.setComplete();
+				handleRead(l_oOp);
+			}
 			break;
 		case eWrite:
-			handleWrite(a_nPid, dynamic_cast<const CStraceOutputParser::CStraceWriteOperation&>(*a_opStraceOp), PendOp.fileId());
+			{
+				CStraceOutputParser::CStraceWriteOperation & l_oOp=dynamic_cast<CStraceOutputParser::CStraceWriteOperation&>(a_opStraceOp);
+				l_oOp.setFileNum(l_oPendOp.fileId());
+				l_oOp.setComplete();
+				handleWrite(l_oOp);
+			}
 			break;
 	}
 	m_oPedningIoOperations.erase(l_oIter);

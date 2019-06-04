@@ -44,13 +44,17 @@ public:
 		CStraceOperation(tIoOp a_eOp, tStraceOpState a_eOpState, tProcessId a_nPid, tFileNum a_nFileNum) :
 			m_eIoOp(a_eOp), m_eOpState(a_eOpState), m_nPid(a_nPid), m_nFileNum(a_nFileNum){}
 		virtual ~CStraceOperation() {}
+
 		virtual tIoOp opType() const 					{return m_eIoOp;}
 		virtual tStraceOpState opState() const 			{return m_eOpState;}
 		virtual tProcessId pid() const 					{return m_nPid;}
 		virtual tFileNum fileNum() const 				{return m_nFileNum;}
 		virtual bool unfinished() const 				{return m_eOpState==eStraceUnfinished;}
 		virtual bool resumed() const 					{return m_eOpState==eStraceResumed;}
-		virtual bool complete() const 					{return m_eOpState==eStraceResumed;}
+		virtual bool complete() const 					{return m_eOpState==eStraceComplete;}
+		virtual void setComplete() 						{m_eOpState=eStraceComplete;}
+		virtual void setFileNum(tFileNum a_nFileNum)	{m_nFileNum=a_nFileNum;}
+		virtual void setPid(tProcessId a_nPid)			{m_nPid=a_nPid;}
 	protected:
 		tIoOp 				m_eIoOp;
 		tStraceOpState		m_eOpState;
@@ -65,6 +69,7 @@ public:
 			CStraceOperation(eOpen, a_eOpState, a_nPid, a_nFileNum), m_sFilename(a_sfilename) {}
 		virtual ~CStraceOpenOperation() {}
 		virtual const std::string filename() const {return m_sFilename;}
+		virtual void setFilename(const std::string &a_sFilename)	{m_sFilename==a_sFilename;}
 	protected:
 		std::string m_sFilename;
 	};
