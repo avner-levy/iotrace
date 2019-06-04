@@ -47,3 +47,4 @@ The tool will be built in ./build/apps/iotrace
 Use the above usage section to see relevant parameters.
 Make sure you have strace installed on the machine.
 In case of attaching to other processes run the tool with sudo to enable required permissions.
+It is best if the command past to iotrace doesn't prints to stdout since it might mix with the output of strace and cause iotrace to miss some of the io operations.
