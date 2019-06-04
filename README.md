@@ -3,7 +3,7 @@ Monitor and generate reports on Linux process's files/sockets IO.
 
 The tool uses the strace utility in order to monitor the process's file activity.
 By going over strace output and collecting information on each file operation, it is able to provide a final report with the following data for each tcp socket/file:
-1. Filename
+1. Filename / socket name(src/port+dst/port)
 2. Bytes read
 3. Bytes written
 4. How many times the file was opened
