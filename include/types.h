@@ -23,6 +23,12 @@ typedef unsigned int tProcessId;
 typedef std::set<tProcessId> tPidSet;
 
 // Supported strace file operations
-enum tIoOp {eRead, eWrite, eOpen, eClose};
+enum tIoOp {
+	eRead,
+	eWrite,
+	eOpen,
+	eClose
+};
+
 
 #endif /* INCLUDE_TYPES_H_ */

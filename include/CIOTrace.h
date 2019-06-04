@@ -105,15 +105,15 @@ private:
 	 * @param a_oStraceOp - Strace operation data, will contain all needed data in a complete strace operations. Will include file descriptor only in case of split strace operation report.
 	 * @param a_sFilename - In case the strace split the operations into two separate lines (unfinished/resumed) we pass the filename we got from the first operation report.
 	 */
-	void handleOpen(tProcessId a_nPid, const CStraceOutputParser::CStraceOperation & a_oStraceOp, const char *a_sFilename);
+	void handleOpen(tProcessId a_nPid, const CStraceOutputParser::CStraceOpenOperation & a_oStraceOp, const char *a_sFilename);
 
-	void UpdateRead(CActiveFileInfo *a_opActiveFile, const CStraceOutputParser::CStraceOperation & a_oStraceOp);
-	void handleRead(tProcessId a_nPid, const CStraceOutputParser::CStraceOperation & a_oStraceOp, tFileNum a_nFileId);
+	void UpdateRead(CActiveFileInfo *a_opActiveFile, const CStraceOutputParser::CStraceReadOperation & a_oStraceOp);
+	void handleRead(tProcessId a_nPid, const CStraceOutputParser::CStraceReadOperation & a_oStraceOp, tFileNum a_nFileId);
 
-	void updateWrite(CActiveFileInfo *a_opActiveFile, const CStraceOutputParser::CStraceOperation & a_oStraceOp);
-	void handleWrite(tProcessId a_nPid, const CStraceOutputParser::CStraceOperation & a_oStraceOp, tFileNum a_nFileId);
-	void handleClose(tProcessId a_nPid, const CStraceOutputParser::CStraceOperation & a_oStraceOp);
-	void handleUnfinished(tProcessId a_nPid, const CStraceOutputParser::CStraceOperation & a_oStraceOp);
+	void updateWrite(CActiveFileInfo *a_opActiveFile, const CStraceOutputParser::CStraceWriteOperation & a_oStraceOp);
+	void handleWrite(tProcessId a_nPid, const CStraceOutputParser::CStraceWriteOperation & a_oStraceOp, tFileNum a_nFileId);
+	void handleClose(tProcessId a_nPid, const CStraceOutputParser::CStraceCloseOperation & a_oStraceOp);
+	void handleUnfinished(tProcessId a_nPid, const CStraceOutputParser::CStraceOperation * const a_oStraceOp);
 
 	void addPendingIoOperation(
 						tProcessId            	a_nPid,

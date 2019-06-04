@@ -7,6 +7,8 @@
 
 #ifndef CSTRACEOUTPUTPARSER_H_
 #define CSTRACEOUTPUTPARSER_H_
+#include <string>
+#include <memory>
 #include "types.h"
 #include "constants.h"
 
@@ -23,37 +25,87 @@
  *
  */
 
+/** Strace file operation state
+ * Strace may report each file io operation in 3 forms
+ * 1. Operation start (line will include input params), 					example: 			[pid 26817] 12:48:22.972737 close(449 <unfinished ...>
+ * 2. Operation resumed (line will include operation result), 				example:			[pid 26817] 12:48:22.972808 <... close resumed> ) = 0
+ * 3. Operation reported in one line (both input and output data included), example:			[pid 26817] 12:48:22.972737 close(449) = 0
+ */
 enum tStraceOpState {eStraceComplete, eStraceUnfinished, eStraceResumed};
+
 class CStraceOutputParser {
 public:
-	// Result of strace line parsing
-	class CStraceOperation final
+	// Parsing output messages
+
+	// Strace io operation base class
+	class CStraceOperation
 	{
 	public:
-		tIoOp  ioOp() 			const {return m_eIoOp;}
-		UInt64 readBytes() 		const {return m_nReadBytes;}
-		UInt64 writtenBytes() 	const {return m_nWrittenBytes;}
-		bool   incomplete() 	const {return m_eOpState==eStraceUnfinished;}
-		bool   resumed() 		const {return m_eOpState==eStraceResumed;}
-
-		tProcessId pid()		const {return m_nPid;}
-		tFileNum fileNum()		const {return m_nFileNum;}
-		const char * filename() const {return m_sFilename;}
-
-	private:
-		void reset() {m_eIoOp=eRead; m_nReadBytes=0; m_nWrittenBytes=0; m_eOpState=eStraceComplete; m_nPid=0; m_nFileNum=UNKNOWN_NUM;m_sFilename=nullptr;}
-		tIoOp m_eIoOp;
-		UInt64 m_nReadBytes;
-		UInt64 m_nWrittenBytes;
-		tStraceOpState m_eOpState;
-		tProcessId m_nPid;
-		tFileNum m_nFileNum;
-		const char * m_sFilename;
-
-		friend class CStraceOutputParser;
+		CStraceOperation(tIoOp a_eOp, tStraceOpState a_eOpState, tProcessId a_nPid, tFileNum a_nFileNum) :
+			m_eIoOp(a_eOp), m_eOpState(a_eOpState), m_nPid(a_nPid), m_nFileNum(a_nFileNum){}
+		virtual ~CStraceOperation() {}
+		virtual tIoOp opType() const 					{return m_eIoOp;}
+		virtual tStraceOpState opState() const 			{return m_eOpState;}
+		virtual tProcessId pid() const 					{return m_nPid;}
+		virtual tFileNum fileNum() const 				{return m_nFileNum;}
+		virtual bool unfinished() const 				{return m_eOpState==eStraceUnfinished;}
+		virtual bool resumed() const 					{return m_eOpState==eStraceResumed;}
+		virtual bool complete() const 					{return m_eOpState==eStraceResumed;}
+	protected:
+		tIoOp 				m_eIoOp;
+		tStraceOpState		m_eOpState;
+		tProcessId 			m_nPid;
+		tFileNum 			m_nFileNum;
 	};
 
-	static bool parseStraceLine(char * a_sLine, bool a_bIncludesProcessId, CStraceOperation & a_oStraceOp);
+	class CStraceOpenOperation : public CStraceOperation
+	{
+	public:
+		CStraceOpenOperation(tStraceOpState a_eOpState, tProcessId a_nPid, const std::string & a_sfilename, tFileNum a_nFileNum) :
+			CStraceOperation(eOpen, a_eOpState, a_nPid, a_nFileNum), m_sFilename(a_sfilename) {}
+		virtual ~CStraceOpenOperation() {}
+		virtual const std::string filename() const {return m_sFilename;}
+	protected:
+		std::string m_sFilename;
+	};
+
+	class CStraceCloseOperation : public CStraceOperation
+	{
+	public:
+		CStraceCloseOperation(tStraceOpState a_eOpState, tProcessId a_nPid, tFileNum a_nFileNum) :
+			CStraceOperation(eClose, a_eOpState, a_nPid, a_nFileNum) {}
+		virtual ~CStraceCloseOperation() {}
+	};
+
+	// Base class for data transfer messages like read/write
+	class CStraceDataTransferOperation : public CStraceOperation
+	{
+	public:
+		CStraceDataTransferOperation(tIoOp a_eOp, tStraceOpState a_eOpState, tProcessId a_nPid, tFileNum a_nFileNum, UInt64 a_nBytes) :
+			CStraceOperation(a_eOp, a_eOpState, a_nPid, a_nFileNum),m_nBytes(a_nBytes) {}
+		virtual ~CStraceDataTransferOperation() {}
+		virtual UInt64 bytes() const {return m_nBytes;}
+	protected:
+		UInt64 m_nBytes;
+	};
+
+	class CStraceReadOperation : public CStraceDataTransferOperation
+	{
+	public:
+		CStraceReadOperation(tStraceOpState a_eOpState, tProcessId a_nPid, tFileNum a_nFileNum, UInt64 a_nBytes) :
+			CStraceDataTransferOperation(eRead, a_eOpState, a_nPid, a_nFileNum, a_nBytes) {}
+		virtual ~CStraceReadOperation() {}
+	};
+
+	class CStraceWriteOperation : public CStraceDataTransferOperation
+	{
+	public:
+		CStraceWriteOperation(tStraceOpState a_eOpState, tProcessId a_nPid, tFileNum a_nFileNum, UInt64 a_nBytes) :
+			CStraceDataTransferOperation(eWrite, a_eOpState, a_nPid, a_nFileNum, a_nBytes) {}
+		virtual ~CStraceWriteOperation() {}
+	};
+
+	static std::unique_ptr<CStraceOperation> parseStraceLine(char * a_sLine, bool a_bIncludesProcessId);
 private:
 	CStraceOutputParser(){}
 };
