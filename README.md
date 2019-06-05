@@ -21,7 +21,7 @@ iotrace [-cmd command] [-p pid] [-o] [-d] [-report filename] [-i] [-f]
 -p pid: process id to trace
 -o : report online IO activity
 -d : debug
--i : include files descriptors which their file names are unknown
+-i : include files descriptors which their file names are unknown (based on /proc/pid/fd)
 -f : follow forked processes
 -report report-file : write the IO report into report-file
 ```
@@ -47,4 +47,5 @@ The tool will be built in ./build/apps/iotrace
 Use the above usage section to see relevant parameters.
 Make sure you have strace installed on the machine.
 In case of attaching to other processes run the tool with sudo to enable required permissions.
+You can attach to a running process with -p, collect data for a period of time and then use Ctrl+C to terminate iotrace and get the report without stopping the target process.
 It is best if the command past to iotrace doesn't prints to stdout since it might mix with the output of strace and cause iotrace to miss some of the io operations.
