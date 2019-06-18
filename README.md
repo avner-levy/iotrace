@@ -49,3 +49,5 @@ Make sure you have strace installed on the machine.
 In case of attaching to other processes run the tool with sudo to enable required permissions.
 You can attach to a running process with -p, collect data for a period of time and then use Ctrl+C to terminate iotrace and get the report without stopping the target process.
 It is best if the command past to iotrace doesn't prints to stdout since it might mix with the output of strace and cause iotrace to miss some of the io operations.
+
+#### Since this is a new tool with known bugs you are suggested using it as an extra source of data but always double check its results  (probably by using strace directly) if they don't make sense (missing files or data).
