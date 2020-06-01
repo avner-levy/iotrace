@@ -9,7 +9,7 @@
 #include  <signal.h>
 
 #include "constants.h"
-#include "CIoTrace.h"
+#include "CIOTrace.h"
 
 using namespace std;
 
