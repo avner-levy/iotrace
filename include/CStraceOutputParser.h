@@ -69,7 +69,7 @@ public:
 			CStraceOperation(eOpen, a_eOpState, a_nPid, a_nFileNum), m_sFilename(a_sfilename) {}
 		virtual ~CStraceOpenOperation() {}
 		virtual const std::string filename() const {return m_sFilename;}
-		virtual void setFilename(const std::string &a_sFilename)	{m_sFilename==a_sFilename;}
+		virtual void setFilename(const std::string &a_sFilename)	{m_sFilename=a_sFilename;}
 	protected:
 		std::string m_sFilename;
 	};
